@@ -1,71 +1,50 @@
-import React, { useEffect, useRef, useState } from 'react';
-import videojs from 'video.js';
-import 'video.js/dist/video-js.css';
-import './VideoPlayer.css';
+import React, { useState, useEffect, useRef } from "react";
+import { IVideoSource } from "../types";
+import videojs from "video.js";
 
-interface VideoData {
-  url: string;
-  title: string;
-  source: string;
-}
-type VideoJsPlayer = any;
+import "video.js/dist/video-js.css";
+import "./VideoPlayer.css";
 
-const VideoPlayer: React.FC = () => {
+const VideoPlayer = (props: IVideoSource) => {
+  const { url, source, title } = props;
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playerRef = useRef<VideoJsPlayer | null>(null);
-  const [videoData, setVideoData] = useState<VideoData | null>(null);
+  const [player, setPlayer] = useState<any>();
+  const videoNodeId: string = "videojs-player";
   const [progress, setProgress] = useState<number>(0);
 
   useEffect(() => {
-    // Initialize Video.js player
-    if (videoRef.current) {
-      playerRef.current = videojs(videoRef.current, {
+    if (source && videoRef.current) {
+      const videoJsOptions = {
         controls: true,
-        preload: 'auto',
-      });
-
-      playerRef.current.on('timeupdate', () => {
-        if (playerRef.current) {
-          setProgress(Math.floor(playerRef.current.currentTime()));
-        }
-      });
+        muted: true,
+        sources: [
+          {
+            src: url,
+            type: `video/${source.toLowerCase()}`,
+          },
+        ],
+      };
+      setPlayer(
+        videojs(videoRef.current, videoJsOptions).ready(function () {
+          console.log("Player is Ready");
+        })
+      );
     }
+  }, [source]);
 
-    // Cleanup
-    return () => {
-      if (playerRef.current) {
-        playerRef.current.dispose();
+  useEffect(() => {
+    return function cleanup() {
+      if (player) {
+        player.dispose();
       }
     };
-  }, []);
-
-  useEffect(() => {
-    // const response = await fetch('http://localhost:4000/video');
-  
-    // if (!response.ok) {
-    //   throw new Error('Network response was not ok');
-    // }
-    // const data = await response.json();
-    // console.log(data);
-
-    fetch('http://localhost:4000/video') // Replace with your API endpoint
-      .then(response => response.json())
-      .then(data => {
-        setVideoData(data)
-      }).catch(error => console.error('Error fetching video data:', error));
-  }, []);
-
-  useEffect(() => {
-    if (videoData && playerRef.current) {
-      playerRef.current.src({ type: 'video/mp4', src: videoData.url });
-    }
-  }, [videoData]);
+  });
 
   return (
     <div className="video-container">
-      <video ref={videoRef} className="video-js vjs-default-skin" />
+      <video id={videoNodeId} ref={videoRef} className="video-js vjs-big-play-centered" />
       <div className="text-card">
-        <h1 id="video-title">{videoData?.title}</h1>
+        <h1 id="video-title">{title}</h1>
         <h2 id="video-progress">Progress: {progress}s</h2>
       </div>
     </div>
